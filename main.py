@@ -18,7 +18,7 @@ def setup_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
-# 设置随机数种子
+# set random seed
 setup_seed(233)
 
 
@@ -105,9 +105,7 @@ if args.latest_discriminator_model != '':
         D.load_state_dict(torch.load(args.latest_discriminator_model, map_location=lambda storage, loc: storage))
 
 
-'''
-    optimizer
-'''
+# filter for train use (not change any more)
 mean_filters = torch.ones(1, 1, 3, 3) / 9.0
 mean_filters = mean_filters.to(device)
 
@@ -128,7 +126,7 @@ def pre_train():
         G_scheduler.step()
         for (x, _), (y, _) in zip(train_loader_source, train_loader_edge):
             x = x.to(device)
-            y = (y > 0.00001).float().detach()  # thinner edge
+            y = (y > 0.00001).float().detach()  # due to resize dataset edge not binary image (wide the edge by the way)
             y = y.to(device)  # bs*1*h*w
             # print(y[0,0,250:280,250:280])
             G_optimizer.zero_grad()
@@ -136,7 +134,7 @@ def pre_train():
             weight = torch.sum(y) / torch.tensor(args.batchsize * 400 * 400)
             weight1 = torch.ones_like(y) * weight
             weight2 = torch.ones_like(y) * (1-weight)
-            # 对y做一个3*3卷积 大于0的地方都加重权 这样label为non edge的也会加权
+            # conv for binary y   thus non edge will add weight too, avoid generating too wide edges
             out = F.conv2d(y, mean_filters, stride=1, padding=1)
             BCE_loss = torch.nn.BCELoss(weight=torch.where(out > 0.00001, weight2, weight1)).to(device)
             Recon_loss = BCE_loss(x_out, y)
@@ -202,7 +200,7 @@ def adv_train():
             D_real_loss = BCE_loss(D_real, real)
 
             x_out = G(x)
-            x_out = x_out.round()  # x_out变为二值  可能不能求导?
+            x_out = x_out.round()  # binary
             D_fake = D(x_out)
             D_fake_loss = BCE_loss(D_fake, fake)
 
@@ -223,7 +221,6 @@ def adv_train():
             weight = torch.sum(y) / torch.tensor(args.batchsize * 400 * 400)
             weight1 = torch.ones_like(y) * weight
             weight2 = torch.ones_like(y) * (1-weight)
-            # 对y做一个3*3卷积 大于0的地方都加重权 这样label为non edge的也会加权
             out = F.conv2d(y, mean_filters, stride=1, padding=1)
             BCE_loss = torch.nn.BCELoss(weight=torch.where(out > 0.00001, weight2, weight1)).to(device)
             Con_loss = BCE_loss(x_out, y.detach())

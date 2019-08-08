@@ -16,6 +16,7 @@ tensorflow Implement（Official ）： https://github.com/sxdxedu/ContourGAN
 * try get as close as possible to the results of the paper...
   * **fix the content loss for G   (Crucial)**
   * fix the Loss for adversarial loss  (e,g,  using wgan-gp  etc..)
+  * add Non-Maximum Suppression for image view
   * decoder conv bilinear interpolation init ... have not added now but refered in paper
   * normalize the input of Discriminator?  now Original binary image
 
